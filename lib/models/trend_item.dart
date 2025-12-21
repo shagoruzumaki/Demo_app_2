@@ -1,3 +1,6 @@
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:demo_app_2/Auth/trend_service.dart';
+
 class TrendItem {
   final String id;
   final String title;
@@ -44,7 +47,32 @@ class TrendItem {
     required this.worthVotes,
     required this.overratedVotes,
   });
+  factory TrendItem.fromJson(Map<String, dynamic> json) {
+    return TrendItem(
+      id: json['id'],
+      title: json['title'],
+      category: json['category'],
+      year: json['year'],
+      duration: json['duration'],
+      quality: json['quality'],
+      emoji: json['emoji'],
+      hypeLevel: json['hype_level'],
+      releaseDate: json['release_date'],
+      redditSentiment: json['reddit_sentiment'] ?? {},
+      youtubeSentiment: json['youtube_sentiment'] ?? {},
+      twitterSentiment: json['twitter_sentiment'] ?? {},
+      whyHyped: json['why_hyped'],
+      worthIt: json['worth_it'],
+      expectation: json['expectation'],
+      reality: json['reality'],
+      worthVotes: json['worth_votes'] ?? 0,
+      overratedVotes: json['overrated_votes'] ?? 0,
+    );
+  }
+
 }
+
+
 
 // Sample data
 final List<TrendItem> allTrendingItems = [

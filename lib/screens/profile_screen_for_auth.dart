@@ -29,7 +29,6 @@ class profileForAuth extends StatelessWidget {
           backgroundColor: Colors.green,
         ));
         Navigator.push(context, MaterialPageRoute(builder: (context)=>ProfileScreen()));
-
       }catch(e){
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(e.toString(),
