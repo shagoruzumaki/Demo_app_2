@@ -1,3 +1,4 @@
+import 'package:demo_app_2/Auth/authgate.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'home_screen.dart';
@@ -39,8 +40,9 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
     _scaleController.forward();
 
     Timer(const Duration(seconds: 3), () {
+      if (!mounted) return;
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => HomeScreen()),
       );
     });
   }

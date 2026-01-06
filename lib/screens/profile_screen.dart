@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../data/services/opinion_service.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -9,6 +11,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  final OpinionService _opinionService = OpinionService();
 
   @override
   void initState() {
@@ -24,6 +27,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
+
     return Scaffold(
       body: CustomScrollView(
         slivers: [
@@ -31,6 +36,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
+            backgroundColor: const Color(0xFF1F2937),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -63,18 +69,18 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                           color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'John Doe',
-                        style: TextStyle(
+                      const SizedBox(height: 12),
+                      Text(
+                        user?.email?.split('@')[0] ?? 'Guest User',
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
                       ),
-                      const Text(
-                        'john.doe@example.com',
-                        style: TextStyle(
+                      Text(
+                        user?.email ?? 'Not logged in',
+                        style: const TextStyle(
                           fontSize: 12,
                           color: Colors.white70,
                         ),
@@ -84,32 +90,28 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                 ),
               ),
             ),
-          ),
-
-          // Stats Row
-          SliverToBoxAdapter(
-            child: Container(
-              margin: const EdgeInsets.all(16),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey[900],
-                borderRadius: BorderRadius.circular(12),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white),
+                onPressed: () async {
+                  await Supabase.instance.client.auth.signOut();
+                  if (!mounted) return;
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Logged out successfully'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildStatItem('Reviews', '24', Icons.rate_review),
-                  _buildStatItem('Votes', '156', Icons.thumb_up),
-                  _buildStatItem('Saved', '8', Icons.bookmark),
-                ],
-              ),
-            ),
+            ],
           ),
 
           // Tabs
           SliverToBoxAdapter(
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16),
+              margin: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.grey[900],
                 borderRadius: BorderRadius.circular(12),
@@ -130,499 +132,359 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             ),
           ),
 
-          // Tab Content - THIS IS THE FIX!
+          // Tab Content
           SliverFillRemaining(
-            hasScrollBody: true, // ADDED THIS
+            hasScrollBody: true,
             child: TabBarView(
               controller: _tabController,
               children: [
-                _buildActivityTab(),
-                _buildSettingsTab(),
+                _buildActivityTab(user),
+                _buildSettingsTab(user),
               ],
             ),
           ),
         ],
       ),
-    );
-  }
-
-  // ========================================
-  // STAT ITEM WIDGET
-  // ========================================
-  Widget _buildStatItem(String label, String value, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, color: const Color(0xFF8B5CF6), size: 24),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 11,
-            color: Colors.grey,
-          ),
-        ),
-      ],
     );
   }
 
   // ========================================
   // MY ACTIVITY TAB
   // ========================================
-  Widget _buildActivityTab() {
-    return SingleChildScrollView( // WRAPPED IN SCROLLVIEW
-      child: Padding(
-        padding: const EdgeInsets.all(16),
+// In profile_screen.dart, replace the _buildActivityTab method:
+
+  Widget _buildActivityTab(User? user) {
+    if (user == null) {
+      return const Center(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(height: 16),
-
-            // Recent Reviews Section
-            const Text(
-              'Recent Reviews',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildActivityCard(
-              "Baldur's Gate 3",
-              'Worth the Hype',
-              '"Masterpiece. Ruined other RPGs for me."',
-              '2 days ago',
-              Colors.green,
-              '🎮',
-            ),
-            _buildActivityCard(
-              'Skull and Bones',
-              'Overrated',
-              '"10 years for this? Disappointing."',
-              '5 days ago',
-              Colors.red,
-              '🏴‍☠️',
-            ),
-            _buildActivityCard(
-              'The Acolyte',
-              'Overrated',
-              '"Great visuals, terrible story."',
-              '1 week ago',
-              Colors.red,
-              '⭐',
-            ),
-
-            const SizedBox(height: 24),
-
-            // Saved Items Section
-            const Text(
-              'Saved Items',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildSavedItemCard('House of Dragon', 'series', '🐉', 88),
-            _buildSavedItemCard('Palworld', 'game', '🔫', 76),
-            _buildSavedItemCard('Bluesky', 'app', '🦋', 71),
-
-            const SizedBox(height: 24),
-
-            // Voting History
-            const Text(
-              'Voting History',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildVotingHistoryItem('Dhurandhar', 'Worth it', '3 days ago', true),
-            _buildVotingHistoryItem('BeReal', 'Overrated', '1 week ago', false),
-            _buildVotingHistoryItem('Starfield', 'Overrated', '2 weeks ago', false),
-
-            const SizedBox(height: 40), // Extra padding at bottom
+            Icon(Icons.login, size: 60, color: Colors.grey),
+            SizedBox(height: 16),
+            Text('Please log in to see your activity'),
           ],
         ),
-      ),
-    );
-  }
+      );
+    }
 
-  Widget _buildActivityCard(
-      String title,
-      String verdict,
-      String review,
-      String time,
-      Color verdictColor,
-      String emoji,
-      ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Emoji
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.grey[800],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(emoji, style: const TextStyle(fontSize: 24)),
-            ),
-          ),
-          const SizedBox(width: 12),
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _opinionService.getMyOpinions(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF8B5CF6)),
+          );
+        }
 
-          // Content
-          Expanded(
+        if (snapshot.hasError) {
+          return Center(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: verdictColor.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        verdict,
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: verdictColor,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
+                const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                const SizedBox(height: 16),
                 Text(
-                  review,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontStyle: FontStyle.italic,
-                    color: Colors.grey,
-                  ),
+                  'Failed to load activity',
+                  style: const TextStyle(color: Colors.red),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  time,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey,
-                  ),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {}); // Refresh
+                  },
+                  child: const Text('Retry'),
                 ),
               ],
             ),
-          ),
-        ],
-      ),
-    );
-  }
+          );
+        }
 
-  Widget _buildSavedItemCard(String title, String category, String emoji, int hypeLevel) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          // Emoji
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.grey[800],
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Center(
-              child: Text(emoji, style: const TextStyle(fontSize: 24)),
-            ),
-          ),
-          const SizedBox(width: 12),
+        final opinions = snapshot.data ?? [];
 
-          // Content
-          Expanded(
+        if (opinions.isEmpty) {
+          return const Center(
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                Icon(Icons.comment_outlined, size: 60, color: Colors.grey),
+                SizedBox(height: 16),
+                Text('No opinions yet'),
+                SizedBox(height: 8),
                 Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  'Start sharing your thoughts on trending items!',
+                  style: TextStyle(color: Colors.grey, fontSize: 12),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
+              ],
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: opinions.length,
+          itemBuilder: (context, index) {
+            final opinion = opinions[index];
+            final item = opinion['trending_items'];
+            final opinionId = opinion['id'];
+            final opinionText = opinion['opinion_text'];
+
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              color: Colors.grey[900],
+              child: Column(
+                children: [
+                  ListTile(
+                    leading: item['poster_url'] != null
+                        ? ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        item['poster_url'],
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[800],
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.broken_image,
+                              color: Colors.white54,
+                            ),
+                          );
+                        },
                       ),
+                    )
+                        : Container(
+                      width: 50,
+                      height: 50,
                       decoration: BoxDecoration(
                         color: Colors.grey[800],
-                        borderRadius: BorderRadius.circular(4),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
-                        category,
-                        style: const TextStyle(fontSize: 10),
-                      ),
+                      child: const Icon(Icons.movie, color: Colors.white54),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Hype: $hypeLevel%',
+                    title: Text(
+                      item['title'],
                       style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
                       ),
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // Remove Button
-          IconButton(
-            icon: const Icon(Icons.bookmark, color: Color(0xFF8B5CF6)),
-            onPressed: () {},
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVotingHistoryItem(String title, String vote, String time, bool isWorth) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        Text(
+                          opinionText,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white70,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _formatDate(opinion['created_at']),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                    isThreeLine: true,
                   ),
-                ),
-                Text(
-                  time,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey,
+
+                  // 🆕 Action Buttons Row
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        // Update Button
+                        TextButton.icon(
+                          onPressed: () {
+                            _showUpdateOpinionDialog(
+                              context,
+                              opinionId,
+                              opinionText,
+                            );
+                          },
+                          icon: const Icon(
+                            Icons.edit,
+                            size: 16,
+                            color: Color(0xFF8B5CF6),
+                          ),
+                          label: const Text(
+                            'Edit',
+                            style: TextStyle(color: Color(0xFF8B5CF6)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+
+                        // Delete Button
+                        TextButton.icon(
+                          onPressed: () {
+                            _showDeleteConfirmation(context, opinionId);
+                          },
+                          icon: const Icon(
+                            Icons.delete,
+                            size: 16,
+                            color: Colors.red,
+                          ),
+                          label: const Text(
+                            'Delete',
+                            style: TextStyle(color: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: isWorth ? Colors.green.withOpacity(0.2) : Colors.red.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              vote,
-              style: TextStyle(
-                fontSize: 12,
-                color: isWorth ? Colors.green : Colors.red,
-                fontWeight: FontWeight.bold,
+                ],
               ),
-            ),
-          ),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 
   // ========================================
   // SETTINGS TAB
   // ========================================
-  Widget _buildSettingsTab() {
-    return SingleChildScrollView( // WRAPPED IN SCROLLVIEW
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
+  Widget _buildSettingsTab(User? user) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Account Section
+          const Text(
+            'Account',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildSettingsTile(
+            Icons.person_outline,
+            'Profile Information',
+            user?.email ?? 'Not logged in',
+                () {},
+          ),
+          _buildSettingsTile(
+            Icons.email_outlined,
+            'Email',
+            user?.email ?? 'N/A',
+                () {},
+          ),
+          _buildSettingsTile(
+            Icons.lock_outline,
+            'Change Password',
+            'Update your password',
+                () {},
+          ),
 
-            // Account Section
-            const Text(
-              'Account',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildSettingsTile(
-              Icons.person_outline,
-              'Edit Profile',
-              'Change your name, email, and photo',
-                  () {},
-            ),
-            _buildSettingsTile(
-              Icons.lock_outline,
-              'Change Password',
-              'Update your password',
-                  () {},
-            ),
-            _buildSettingsTile(
-              Icons.notifications_outlined,
-              'Notifications',
-              'Manage notification preferences',
-                  () {},
-            ),
+          const SizedBox(height: 24),
 
-            const SizedBox(height: 24),
+          // Preferences Section
+          const Text(
+            'Preferences',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildSettingsTile(
+            Icons.notifications_outlined,
+            'Notifications',
+            'Manage notification preferences',
+                () {},
+          ),
+          _buildSettingsTile(
+            Icons.dark_mode_outlined,
+            'Dark Mode',
+            'Always on',
+                () {},
+            trailing: Switch(
+              value: true,
+              onChanged: (value) {},
+              activeColor: const Color(0xFF8B5CF6),
+            ),
+          ),
+          _buildSettingsTile(
+            Icons.language_outlined,
+            'Language',
+            'English',
+                () {},
+          ),
 
-            // Preferences Section
-            const Text(
-              'Preferences',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildSettingsTile(
-              Icons.dark_mode_outlined,
-              'Dark Mode',
-              'Always on',
-                  () {},
-              trailing: Switch(
-                value: true,
-                onChanged: (value) {},
-                activeColor: const Color(0xFF8B5CF6),
-              ),
-            ),
-            _buildSettingsTile(
-              Icons.language_outlined,
-              'Language',
-              'English',
-                  () {},
-            ),
-            _buildSettingsTile(
-              Icons.filter_list_outlined,
-              'Content Filters',
-              'Customize what you see',
-                  () {},
-            ),
+          const SizedBox(height: 24),
 
-            const SizedBox(height: 24),
+          // About Section
+          const Text(
+            'About',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildSettingsTile(
+            Icons.info_outline,
+            'About Trend Evaluator',
+            'Version 1.0.0',
+                () {},
+          ),
+          _buildSettingsTile(
+            Icons.privacy_tip_outlined,
+            'Privacy Policy',
+            'Read our privacy policy',
+                () {},
+          ),
+          _buildSettingsTile(
+            Icons.help_outline,
+            'Help & Support',
+            'Get help with the app',
+                () {},
+          ),
 
-            // About Section
-            const Text(
-              'About',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildSettingsTile(
-              Icons.info_outline,
-              'About Trend Evaluator',
-              'Version 1.0.0',
-                  () {},
-            ),
-            _buildSettingsTile(
-              Icons.privacy_tip_outlined,
-              'Privacy Policy',
-              'Read our privacy policy',
-                  () {},
-            ),
-            _buildSettingsTile(
-              Icons.description_outlined,
-              'Terms of Service',
-              'Read our terms',
-                  () {},
-            ),
-            _buildSettingsTile(
-              Icons.help_outline,
-              'Help & Support',
-              'Get help with the app',
-                  () {},
-            ),
+          const SizedBox(height: 24),
 
-            const SizedBox(height: 24),
+          // Danger Zone
+          const Text(
+            'Danger Zone',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.red,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildSettingsTile(
+            Icons.logout,
+            'Logout',
+            'Sign out of your account',
+                () async {
+              await Supabase.instance.client.auth.signOut();
+              if (!mounted) return;
+              Navigator.pop(context);
+            },
+            iconColor: Colors.red,
+          ),
 
-            // Danger Zone
-            const Text(
-              'Danger Zone',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.red,
-              ),
-            ),
-            const SizedBox(height: 12),
-            _buildSettingsTile(
-              Icons.delete_outline,
-              'Delete Account',
-              'Permanently delete your account',
-                  () {
-                _showDeleteAccountDialog();
-              },
-              iconColor: Colors.red,
-            ),
-            _buildSettingsTile(
-              Icons.logout,
-              'Logout',
-              'Sign out of your account',
-                  () {
-                _showLogoutDialog();
-              },
-              iconColor: Colors.red,
-            ),
-
-            const SizedBox(height: 40),
-          ],
-        ),
+          const SizedBox(height: 40),
+        ],
       ),
     );
   }
@@ -651,7 +513,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
-            color: iconColor,
+            color: iconColor ?? Colors.white,
           ),
         ),
         subtitle: Text(
@@ -667,59 +529,226 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
     );
   }
 
-  // ========================================
-  // DIALOGS
-  // ========================================
-  void _showLogoutDialog() {
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final difference = now.difference(date);
+
+      if (difference.inDays > 0) {
+        return '${difference.inDays}d ago';
+      } else if (difference.inHours > 0) {
+        return '${difference.inHours}h ago';
+      } else if (difference.inMinutes > 0) {
+        return '${difference.inMinutes}m ago';
+      } else {
+        return 'Just now';
+      }
+    } catch (e) {
+      return 'Unknown';
+    }
+  }
+  // 🆕 Show Update Opinion Dialog
+  void _showUpdateOpinionDialog(
+      BuildContext context,
+      String opinionId,
+      String currentText,
+      ) {
+    final controller = TextEditingController(text: currentText);
+    bool isUpdating = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Logged out successfully')),
-              );
-            },
-            child: const Text('Logout', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: const Text(
+              'Update Opinion',
+              style: TextStyle(color: Colors.white),
+            ),
+            content: TextField(
+              controller: controller,
+              maxLines: 4,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                hintText: 'Write your updated opinion...',
+                hintStyle: TextStyle(color: Colors.grey[600]),
+                filled: true,
+                fillColor: Colors.grey[800],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isUpdating
+                    ? null
+                    : () {
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: isUpdating
+                    ? null
+                    : () async {
+                  if (controller.text.trim().isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Opinion cannot be empty'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    return;
+                  }
+
+                  setDialogState(() => isUpdating = true);
+
+                  try {
+                    await _opinionService.updateOpinion(
+                      opinionId: opinionId,
+                      newText: controller.text.trim(),
+                    );
+
+                    if (!mounted) return;
+
+                    Navigator.pop(dialogContext);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Opinion updated successfully!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+
+                    // Refresh the list
+                    setState(() {});
+                  } catch (e) {
+                    if (!mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to update: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  } finally {
+                    if (mounted) {
+                      setDialogState(() => isUpdating = false);
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8B5CF6),
+                ),
+                child: isUpdating
+                    ? const SizedBox(
+                  height: 16,
+                  width: 16,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+                    : const Text('Update'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  void _showDeleteAccountDialog() {
+// 🆕 Show Delete Confirmation Dialog
+  void _showDeleteConfirmation(BuildContext context, String opinionId) {
+    bool isDeleting = false;
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: Colors.grey[900],
-        title: const Text('Delete Account', style: TextStyle(color: Colors.red)),
-        content: const Text(
-          'This action cannot be undone. All your data will be permanently deleted.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Account deletion cancelled')),
-              );
-            },
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            backgroundColor: Colors.grey[900],
+            title: const Text(
+              'Delete Opinion',
+              style: TextStyle(color: Colors.red),
+            ),
+            content: const Text(
+              'Are you sure you want to delete this opinion? This action cannot be undone.',
+              style: TextStyle(color: Colors.white70),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isDeleting
+                    ? null
+                    : () {
+                  Navigator.pop(dialogContext);
+                },
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ),
+              ElevatedButton(
+                onPressed: isDeleting
+                    ? null
+                    : () async {
+                  setDialogState(() => isDeleting = true);
+
+                  try {
+                    await _opinionService.deleteOpinion(opinionId);
+
+                    if (!mounted) return;
+
+                    Navigator.pop(dialogContext);
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Opinion deleted successfully!'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+
+                    // Refresh the list
+                    setState(() {});
+                  } catch (e) {
+                    if (!mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to delete: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  } finally {
+                    if (mounted) {
+                      setDialogState(() => isDeleting = false);
+                    }
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                ),
+                child: isDeleting
+                    ? const SizedBox(
+                  height: 16,
+                  width: 16,
+                  child: CircularProgressIndicator(
+                    color: Colors.white,
+                    strokeWidth: 2,
+                  ),
+                )
+                    : const Text('Delete'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

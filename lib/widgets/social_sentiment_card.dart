@@ -26,7 +26,8 @@ class SocialSentimentCard extends StatelessWidget {
       positive = sentimentData['positive'] ?? 0;
       negative = sentimentData['negative'] ?? 0;
       topContent = '"${sentimentData['topComment'] ?? 'No comment'}"';
-      additionalInfo = '${positive + negative} discussions in ${sentimentData['subreddit'] ?? 'various subreddits'}';
+      additionalInfo =
+      '${positive + negative} discussions in ${sentimentData['subreddit'] ?? 'various subreddits'}';
     } else if (platform == 'YouTube') {
       positive = sentimentData['likes'] ?? 0;
       negative = sentimentData['dislikes'] ?? 0;
@@ -45,10 +46,10 @@ class SocialSentimentCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey[900]!.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: platformColor.withOpacity(0.3),
           width: 1,
@@ -61,7 +62,31 @@ class SocialSentimentCard extends StatelessWidget {
           Row(
             children: [
               // Platform Icon/Logo
-              _buildPlatformIcon(),
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: platformColor,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: platformColor.withOpacity(0.4),
+                      blurRadius: 8,
+                      spreadRadius: 1,
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    platformIcon,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(width: 12),
 
               // Platform Name
@@ -70,13 +95,13 @@ class SocialSentimentCard extends StatelessWidget {
                   platform,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 15,
+                    fontSize: 16,
                     color: Colors.white,
                   ),
                 ),
               ),
 
-              // Sentiment Percentage
+              // Sentiment Percentage Badge
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -120,9 +145,9 @@ class SocialSentimentCard extends StatelessWidget {
 
           const SizedBox(height: 12),
 
-          // Top Comment/Hashtag
+          // Top Comment/Hashtag Box
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: platformColor.withOpacity(0.1),
               borderRadius: BorderRadius.circular(8),
@@ -137,17 +162,13 @@ class SocialSentimentCard extends StatelessWidget {
                 Row(
                   children: [
                     Icon(
-                      platform == 'Twitter/X'
-                          ? Icons.tag
-                          : Icons.format_quote,
+                      platform == 'Twitter/X' ? Icons.tag : Icons.format_quote,
                       size: 14,
                       color: platformColor,
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      platform == 'Twitter/X'
-                          ? 'Trending Hashtag'
-                          : 'Top Comment',
+                      platform == 'Twitter/X' ? 'Trending Hashtag' : 'Top Comment',
                       style: TextStyle(
                         fontSize: 11,
                         color: platformColor,
@@ -174,7 +195,7 @@ class SocialSentimentCard extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          // Additional Info (discussions/videos/tweets count)
+          // Additional Info
           Row(
             children: [
               Icon(
@@ -199,40 +220,7 @@ class SocialSentimentCard extends StatelessWidget {
     );
   }
 
-  // ========================================
-  // BUILD PLATFORM ICON
-  // ========================================
-  Widget _buildPlatformIcon() {
-    return Container(
-      width: 36,
-      height: 36,
-      decoration: BoxDecoration(
-        color: platformColor,
-        shape: BoxShape.circle,
-        boxShadow: [
-          BoxShadow(
-            color: platformColor.withOpacity(0.4),
-            blurRadius: 8,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: Center(
-        child: Text(
-          platformIcon,
-          style: const TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: Colors.white,
-          ),
-        ),
-      ),
-    );
-  }
-
-  // ========================================
-  // BUILD SENTIMENT BAR
-  // ========================================
+  // Sentiment Bar Widget
   Widget _buildSentimentBar(int percentage) {
     return Column(
       children: [
@@ -302,10 +290,7 @@ class SocialSentimentCard extends StatelessWidget {
     );
   }
 
-  // ========================================
-  // HELPER METHODS
-  // ========================================
-
+  // Helper Methods
   Color _getSentimentColor(int percentage) {
     if (percentage >= 70) return Colors.green;
     if (percentage >= 60) return Colors.lightGreen;

@@ -1,29 +1,131 @@
 import 'package:flutter/material.dart';
-import '../models/trend_item.dart';
+import '../data/models/trend_item.dart';
+import '../data/services/opinion_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-class DetailScreen extends StatelessWidget {
+class DetailScreen extends StatefulWidget {
   final TrendItem item;
 
-  const DetailScreen({Key? key, required this.item}) : super(key: key);
+  const DetailScreen({
+    super.key,
+    required this.item,
+  });
+
+  @override
+  State<DetailScreen> createState() => _DetailScreenState();
+}
+
+class _DetailScreenState extends State<DetailScreen> {
+  final TextEditingController _opinionController = TextEditingController();
+  bool _isSubmitting = false;
+  final OpinionService _opinionService = OpinionService();
+
+  Future<void> _submitOpinion() async {
+    if (_opinionController.text.trim().isEmpty) return;
+
+    setState(() => _isSubmitting = true);
+
+    try {
+      await _opinionService.addOpinion(
+        itemId: widget.item.id,
+        text: _opinionController.text.trim(),
+      );
+
+      _opinionController.clear();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Opinion submitted successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to submit: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+
+    setState(() => _isSubmitting = false);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final totalVotes = item.worthVotes + item.overratedVotes;
-    final worthPercentage = ((item.worthVotes / totalVotes) * 100).round();
+    final item = widget.item;
+    final hype = widget.item.hype;
+
+    // Safety guard
+    if (hype == null) {
+      return Scaffold(
+        appBar: AppBar(
+          backgroundColor: const Color(0xFF1F2937),
+          title: Text(item.title),
+        ),
+        body: const Center(
+          child: Text(
+            'No hype data available',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: CustomScrollView(
         slivers: [
-          // Top App Bar with Poster
+          // Hero Image App Bar
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: 250,
             pinned: true,
+            backgroundColor: const Color(0xFF1F2937),
             flexibleSpace: FlexibleSpaceBar(
-              background: Container(
+              background: item.posterUrl != null
+                  ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  Image.network(
+                    item.posterUrl!,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              _getCategoryColor().withOpacity(0.8),
+                              _getCategoryColor(),
+                            ],
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _getCategoryEmoji(),
+                            style: const TextStyle(fontSize: 80),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withOpacity(0.7),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              )
+                  : Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
                     colors: [
                       _getCategoryColor().withOpacity(0.8),
                       _getCategoryColor(),
@@ -32,7 +134,7 @@ class DetailScreen extends StatelessWidget {
                 ),
                 child: Center(
                   child: Text(
-                    item.emoji,
+                    _getCategoryEmoji(),
                     style: const TextStyle(fontSize: 80),
                   ),
                 ),
@@ -40,48 +142,189 @@ class DetailScreen extends StatelessWidget {
             ),
           ),
 
-          // Main Content
+          // Content
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Title Section with Badges
-                  _buildTitleSection(),
-                  const SizedBox(height: 20),
+                  // Title and Badge
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getCategoryColor(),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          item.category.toUpperCase(),
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
 
-                  // Current Hype Level Bar
-                  _buildHypeLevel(),
+                  Text(
+                    item.title,
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+
+                  if (item.description != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      item.description!,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
+
                   const SizedBox(height: 24),
 
-                  // Social Media Sentiment Section
-                  _buildSocialSentiment(),
+                  // Hype Level Card
+                  _buildHypeLevel(_getHypeLevel(hype)),
                   const SizedBox(height: 24),
 
-                  // Why Was It Hyped?
+                  // Why Hyped Section
                   _buildSection(
                     '🔥 Why Was It Hyped?',
-                    item.whyHyped,
+                    _getStringValue(hype['why_hyped']) ?? 'No information available',
                     Colors.yellow[700]!,
                   ),
                   const SizedBox(height: 16),
 
-                  // Is It Worth The Hype?
-                  _buildSection(
-                    '⭐ Is It Worth The Hype?',
-                    item.worthIt,
-                    Colors.blue[400]!,
+                  // Expectation vs Reality
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildExpectationCard(
+                          'Expectation',
+                          _getStringValue(hype['expectation']) ?? 'No data',
+                          Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildExpectationCard(
+                          'Reality',
+                          _getStringValue(hype['reality']) ?? 'No data',
+                          Colors.orange,
+                        ),
+                      ),
+                    ],
                   ),
+
                   const SizedBox(height: 24),
 
-                  // Expectation vs Reality Cards
-                  _buildExpectationVsReality(),
-                  const SizedBox(height: 24),
+                  // Social Media Sentiment Section
+                  const Text(
+                    '📊 Social Media Sentiment',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
-                  // Our Platform's Statistics
-                  _buildPlatformStats(worthPercentage),
-                  const SizedBox(height: 30),
+                  _buildSentimentCard(
+                    'YouTube',
+                    _getStringValue(hype['youtube_sentiment']) ?? 'No data',
+                    Icons.play_circle_filled,
+                    const Color(0xFFFF0000),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildSentimentCard(
+                    'Reddit',
+                    _getStringValue(hype['reddit_sentiment']) ?? 'No data',
+                    Icons.reddit,
+                    const Color(0xFFFF4500),
+                  ),
+                  const SizedBox(height: 12),
+
+                  _buildSentimentCard(
+                    'Twitter',
+                    _getStringValue(hype['twitter_sentiment']) ?? 'No data',
+                    Icons.chat_bubble_outline,
+                    const Color(0xFF1DA1F2),
+                  ),
+
+                  const SizedBox(height: 24),
+                  const Divider(),
+                  const SizedBox(height: 16),
+
+                  // Opinion Section
+                  const Text(
+                    'Share Your Opinion',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextField(
+                    controller: _opinionController,
+                    maxLines: 4,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'What do you think about this trend?',
+                      hintStyle: TextStyle(color: Colors.grey[600]),
+                      filled: true,
+                      fillColor: Colors.grey[900],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _isSubmitting ? null : _submitOpinion,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF8B5CF6),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: _isSubmitting
+                          ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                          : const Text(
+                        'Submit Opinion',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
                 ],
               ),
             ),
@@ -91,82 +334,7 @@ class DetailScreen extends StatelessWidget {
     );
   }
 
-  // ========================================
-  // BUILD TITLE SECTION WITH BADGES
-  // ========================================
-  Widget _buildTitleSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Badges Row
-        Row(
-          children: [
-            // Category Badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: _getCategoryColor(),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                item.category.toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-
-            // Ratings Badge
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.grey[800],
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.star, size: 14, color: Colors.yellow),
-                  SizedBox(width: 4),
-                  Text(
-                    'Ratings',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-
-        // Title
-        Text(
-          item.title,
-          style: const TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-
-        // Release Date
-        Text(
-          item.releaseDate,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ========================================
-  // BUILD CURRENT HYPE LEVEL BAR
-  // ========================================
-  Widget _buildHypeLevel() {
+  Widget _buildHypeLevel(int hypeLevel) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -176,31 +344,22 @@ class DetailScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text(
                 'Current Hype Level',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
               Row(
                 children: [
                   Icon(
-                    item.hypeLevel >= 70
-                        ? Icons.trending_up
-                        : Icons.trending_down,
-                    color: item.hypeLevel >= 70
-                        ? Colors.green
-                        : Colors.red,
-                    size: 20,
+                    hypeLevel >= 70 ? Icons.trending_up : Icons.trending_down,
+                    color: hypeLevel >= 70 ? Colors.green : Colors.red,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    '${item.hypeLevel}%',
+                    '$hypeLevel%',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -211,15 +370,14 @@ class DetailScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-
-          // Progress Bar
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: LinearProgressIndicator(
-              value: item.hypeLevel / 100,
+              value: hypeLevel / 100,
               minHeight: 12,
               backgroundColor: Colors.grey[800],
-              valueColor: AlwaysStoppedAnimation<Color>(_getHypeColor()),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                  _getHypeColor(hypeLevel)),
             ),
           ),
         ],
@@ -227,206 +385,6 @@ class DetailScreen extends StatelessWidget {
     );
   }
 
-  // ========================================
-  // BUILD SOCIAL MEDIA SENTIMENT SECTION
-  // ========================================
-  Widget _buildSocialSentiment() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Colors.blue[900]!.withOpacity(0.3),
-            Colors.purple[900]!.withOpacity(0.3),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: Colors.blue.withOpacity(0.3),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Section Header
-          const Row(
-            children: [
-              Icon(Icons.public, color: Colors.blue, size: 20),
-              SizedBox(width: 8),
-              Text(
-                'What Social Media Says',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Reddit Card
-          _buildSocialCard(
-            'Reddit',
-            item.redditSentiment,
-            Colors.orange,
-            'R',
-          ),
-          const SizedBox(height: 12),
-
-          // YouTube Card
-          _buildSocialCard(
-            'YouTube',
-            item.youtubeSentiment,
-            Colors.red,
-            '▶',
-          ),
-          const SizedBox(height: 12),
-
-          // Twitter/X Card
-          _buildSocialCard(
-            'Twitter/X',
-            item.twitterSentiment,
-            Colors.blue,
-            '𝕏',
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ========================================
-  // BUILD INDIVIDUAL SOCIAL MEDIA CARD
-  // ========================================
-  Widget _buildSocialCard(
-      String platform,
-      Map<String, dynamic> data,
-      Color color,
-      String icon,
-      ) {
-    // Extract data based on platform
-    int positive = 0;
-    int negative = 0;
-    String topContent = '';
-
-    if (platform == 'Reddit') {
-      positive = data['positive'] ?? 0;
-      negative = data['negative'] ?? 0;
-      topContent = '"${data['topComment']}"';
-    } else if (platform == 'YouTube') {
-      positive = data['likes'] ?? 0;
-      negative = data['dislikes'] ?? 0;
-      topContent = '"${data['topComment']}"';
-    } else {
-      // Twitter
-      positive = data['positive'] ?? 0;
-      negative = data['negative'] ?? 0;
-      topContent = data['hashtag'] ?? '';
-    }
-
-    // Calculate percentage
-    final total = positive + negative;
-    final percentage = total > 0 ? ((positive / total) * 100).round() : 0;
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey[900]!.withOpacity(0.5),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Platform Header
-          Row(
-            children: [
-              // Platform Icon
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: color,
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    icon,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-
-              // Platform Name
-              Text(
-                platform,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-              const Spacer(),
-
-              // Percentage
-              Text(
-                '$percentage%',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: _getSentimentColor(percentage.toDouble()),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Top Comment or Hashtag
-          Text(
-            topContent,
-            style: const TextStyle(
-              fontSize: 12,
-              fontStyle: FontStyle.italic,
-              color: Colors.grey,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-
-          // Discussion Count
-          if (platform == 'Reddit')
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '${data['positive'] + data['negative']} discussions',
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-
-          if (platform == 'YouTube')
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '${data['videoCount']} videos analyzed',
-                style: const TextStyle(
-                  fontSize: 10,
-                  color: Colors.grey,
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  // ========================================
-  // BUILD SECTION (WHY HYPED / WORTH IT)
-  // ========================================
   Widget _buildSection(String title, String content, Color titleColor) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -448,42 +406,10 @@ class DetailScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             content,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Colors.white70,
-              height: 1.5,
-            ),
+            style: const TextStyle(fontSize: 14, color: Colors.white70),
           ),
         ],
       ),
-    );
-  }
-
-  // ========================================
-  // BUILD EXPECTATION VS REALITY CARDS
-  // ========================================
-  Widget _buildExpectationVsReality() {
-    return Row(
-      children: [
-        // Expectation Card
-        Expanded(
-          child: _buildExpectationCard(
-            'Expectation',
-            item.expectation,
-            Colors.blue,
-          ),
-        ),
-        const SizedBox(width: 12),
-
-        // Reality Card
-        Expanded(
-          child: _buildExpectationCard(
-            'Reality',
-            item.reality,
-            Colors.orange,
-          ),
-        ),
-      ],
     );
   }
 
@@ -509,126 +435,121 @@ class DetailScreen extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             text,
-            style: const TextStyle(
-              fontSize: 12,
-              height: 1.4,
-            ),
+            style: const TextStyle(fontSize: 12),
           ),
         ],
       ),
     );
   }
 
-  // ========================================
-  // BUILD PLATFORM STATISTICS
-  // ========================================
-  Widget _buildPlatformStats(int worthPercentage) {
+  Widget _buildSentimentCard(String platform, String sentiment, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.grey[900],
-        borderRadius: BorderRadius.circular(12),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            color.withOpacity(0.1),
+            color.withOpacity(0.05),
+          ],
+        ),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          const Text(
-            'Our Platform\'s Data',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+          // Platform Icon
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 28,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(width: 16),
 
-          // Vote Statistics Row
-          Row(
-            children: [
-              // Worth the Hype
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green[900]!.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '$worthPercentage%',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green,
-                        ),
-                      ),
-                      const Text(
-                        'Worth the Hype',
-                        style: TextStyle(fontSize: 12),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${item.worthVotes} votes',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
+          // Platform Name and Sentiment
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  platform,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: color,
                   ),
                 ),
-              ),
-              const SizedBox(width: 12),
-
-              // Overrated
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.red[900]!.withOpacity(0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      Text(
-                        '${100 - worthPercentage}%',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.red,
-                        ),
-                      ),
-                      const Text(
-                        'Overrated',
-                        style: TextStyle(fontSize: 12),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        '${item.overratedVotes} votes',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ],
+                const SizedBox(height: 4),
+                Text(
+                  sentiment,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.white70,
+                    height: 1.4,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+
+          // Sentiment Indicator
+          _buildSentimentIndicator(sentiment, color),
         ],
       ),
     );
   }
 
-  // ========================================
-  // HELPER METHODS FOR COLORS
-  // ========================================
+  Widget _buildSentimentIndicator(String sentiment, Color platformColor) {
+    IconData icon;
+    Color color;
+
+    final lowerSentiment = sentiment.toLowerCase();
+
+    if (lowerSentiment.contains('positive') || lowerSentiment.contains('good') || lowerSentiment.contains('great')) {
+      icon = Icons.sentiment_very_satisfied;
+      color = Colors.green;
+    } else if (lowerSentiment.contains('negative') || lowerSentiment.contains('bad') || lowerSentiment.contains('poor')) {
+      icon = Icons.sentiment_very_dissatisfied;
+      color = Colors.red;
+    } else if (lowerSentiment.contains('mixed') || lowerSentiment.contains('neutral')) {
+      icon = Icons.sentiment_neutral;
+      color = Colors.orange;
+    } else {
+      icon = Icons.help_outline;
+      color = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.2),
+        shape: BoxShape.circle,
+      ),
+      child: Icon(
+        icon,
+        color: color,
+        size: 24,
+      ),
+    );
+  }
 
   Color _getCategoryColor() {
-    switch (item.category) {
+    switch (widget.item.category.toLowerCase()) {
       case 'game':
         return const Color(0xFF7C3AED);
       case 'movie':
@@ -642,16 +563,52 @@ class DetailScreen extends StatelessWidget {
     }
   }
 
-  Color _getHypeColor() {
-    if (item.hypeLevel >= 70) return Colors.green;
-    if (item.hypeLevel >= 50) return Colors.yellow;
-    if (item.hypeLevel >= 30) return Colors.orange;
+  String _getCategoryEmoji() {
+    switch (widget.item.category.toLowerCase()) {
+      case 'game':
+        return '🎮';
+      case 'movie':
+        return '🎬';
+      case 'series':
+        return '📺';
+      case 'app':
+        return '📱';
+      default:
+        return '❓';
+    }
+  }
+
+  Color _getHypeColor(int hypeLevel) {
+    if (hypeLevel >= 70) return Colors.green;
+    if (hypeLevel >= 50) return Colors.yellow;
+    if (hypeLevel >= 30) return Colors.orange;
     return Colors.red;
   }
 
-  Color _getSentimentColor(double percentage) {
-    if (percentage >= 60) return Colors.green;
-    if (percentage >= 40) return Colors.yellow;
-    return Colors.red;
+  // Helper methods to safely extract values from hype map
+  int _getHypeLevel(Map<String, dynamic>? hype) {
+    if (hype == null) return 0;
+    final value = hype['hype_level'];
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value) ?? 0;
+    return 0;
+  }
+
+  String? _getStringValue(dynamic value) {
+    if (value == null) return null;
+    String str = value is String ? value : value.toString();
+
+    // Clean up the string - remove curly braces, quotes, and extra whitespace
+    str = str.replaceAll('{', '').replaceAll('}', '').trim();
+
+    return str;
+  }
+
+  @override
+  void dispose() {
+    _opinionController.dispose();
+    super.dispose();
   }
 }
