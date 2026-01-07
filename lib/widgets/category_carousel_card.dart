@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../data/models/trend_item.dart';
+import '../screens/see_all_screen.dart';
 import 'movie_card.dart';
 
 class CategoryCarousel extends StatelessWidget {
@@ -50,7 +51,28 @@ class CategoryCarousel extends StatelessWidget {
               const Spacer(),
               TextButton(
                 onPressed: () {
-                  // TODO: Navigate to "See All" screen
+                  // Get category from title
+                  String category = categoryTitle.toLowerCase();
+                  if (category == 'series') {
+                    category = 'series';
+                  } else if (category == 'games') {
+                    category = 'game';
+                  } else if (category == 'apps') {
+                    category = 'app';
+                  } else if (category == 'movies') {
+                    category = 'movie';
+                  }
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => SeeAllScreen(
+                        category: category,
+                        categoryTitle: categoryTitle,
+                        categoryIcon: categoryIcon,
+                      ),
+                    ),
+                  );
                 },
                 child: const Text(
                   'See All',
