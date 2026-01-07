@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 class OpinionService {
   final _supabase = Supabase.instance.client;
 
-  // ✅ EXISTING - Add Opinion
+  // Add Opinion
   Future<void> addOpinion({
     required String itemId,
     required String text,
@@ -19,7 +19,7 @@ class OpinionService {
     });
   }
 
-  // ✅ EXISTING - Get My Opinions
+  // Get My Opinions
   Future<List<Map<String, dynamic>>> getMyOpinions() async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not logged in');
@@ -33,7 +33,7 @@ class OpinionService {
     return List<Map<String, dynamic>>.from(response);
   }
 
-  // 🆕 NEW - Update Opinion
+  // Update Opinion
   Future<void> updateOpinion({
     required String opinionId,
     required String newText,
@@ -51,7 +51,7 @@ class OpinionService {
         .eq('user_id', userId); // Security: only update your own opinions
   }
 
-  // 🆕 NEW - Delete Opinion
+  // Delete Opinion
   Future<void> deleteOpinion(String opinionId) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) throw Exception('User not logged in');

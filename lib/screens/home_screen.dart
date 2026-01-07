@@ -60,13 +60,13 @@ class HomeScreen extends StatelessWidget {
                   final user = Supabase.instance.client.auth.currentUser;
 
                   if (user != null) {
-                    // User is logged in → Go to Profile
+                    // User is logged in Go to Profile
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const ProfileScreen()),
                     );
                   } else {
-                    // User not logged in → Go to Auth
+                    // User not logged  Go to Auth
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (_) => const profileForAuth()),

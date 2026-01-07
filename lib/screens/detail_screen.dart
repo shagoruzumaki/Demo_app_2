@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../data/models/trend_item.dart';
 import '../data/services/opinion_service.dart';
+import '../widgets/social_sentiment_card.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DetailScreen extends StatefulWidget {
@@ -127,7 +128,7 @@ class _DetailScreenState extends State<DetailScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      _getCategoryColor().withOpacity(0.8),
+                      _getCategoryColor().withValues(alpha: 0.8),
                       _getCategoryColor(),
                     ],
                   ),
@@ -238,27 +239,27 @@ class _DetailScreenState extends State<DetailScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  _buildSentimentCard(
-                    'YouTube',
-                    _getStringValue(hype['youtube_sentiment']) ?? 'No data',
-                    Icons.play_circle_filled,
-                    const Color(0xFFFF0000),
+                  SocialSentimentCard(
+                    platform: 'YouTube',
+                    sentiment: _getStringValue(hype['youtube_sentiment']) ?? 'No data',
+                    icon: Icons.play_circle_filled,
+                    platformColor: const Color(0xFFFF0000),
                   ),
                   const SizedBox(height: 12),
 
-                  _buildSentimentCard(
-                    'Reddit',
-                    _getStringValue(hype['reddit_sentiment']) ?? 'No data',
-                    Icons.reddit,
-                    const Color(0xFFFF4500),
+                  SocialSentimentCard(
+                    platform: 'Reddit',
+                    sentiment: _getStringValue(hype['reddit_sentiment']) ?? 'No data',
+                    icon: Icons.reddit,
+                    platformColor: const Color(0xFFFF4500),
                   ),
                   const SizedBox(height: 12),
 
-                  _buildSentimentCard(
-                    'Twitter',
-                    _getStringValue(hype['twitter_sentiment']) ?? 'No data',
-                    Icons.chat_bubble_outline,
-                    const Color(0xFF1DA1F2),
+                  SocialSentimentCard(
+                    platform: 'Twitter',
+                    sentiment: _getStringValue(hype['twitter_sentiment']) ?? 'No data',
+                    icon: Icons.chat_bubble_outline,
+                    platformColor: const Color(0xFF1DA1F2),
                   ),
 
                   const SizedBox(height: 24),
@@ -417,7 +418,7 @@ class _DetailScreenState extends State<DetailScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         border: Border.all(color: color, width: 2),
         borderRadius: BorderRadius.circular(12),
       ),

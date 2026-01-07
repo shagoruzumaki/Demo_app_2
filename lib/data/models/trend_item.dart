@@ -5,7 +5,7 @@ class TrendItem {
   final String? posterUrl;
   final String? description;
 
-  // 🔥 NEW: backend hype (raw map)
+  // backend hype (raw map)
   final Map<String, dynamic>? hype;
 
   TrendItem({
@@ -24,7 +24,7 @@ class TrendItem {
       category: map['category'],
       posterUrl: map['poster_url'],
       description: map['description'],
-      hype: map['trend_hype'], // 👈 joined table
+      hype: map['trend_hype'], // joined table
     );
   }
 }
