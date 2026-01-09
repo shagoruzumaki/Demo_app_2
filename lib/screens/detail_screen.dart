@@ -96,7 +96,7 @@ class _DetailScreenState extends State<DetailScreen> {
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              _getCategoryColor().withOpacity(0.8),
+                              _getCategoryColor().withValues(alpha: 0.8),
                               _getCategoryColor(),
                             ],
                           ),
@@ -117,7 +117,7 @@ class _DetailScreenState extends State<DetailScreen> {
                         end: Alignment.bottomCenter,
                         colors: [
                           Colors.transparent,
-                          Colors.black.withOpacity(0.7),
+                          Colors.black.withValues(alpha: 0.7),
                         ],
                       ),
                     ),
@@ -439,112 +439,6 @@ class _DetailScreenState extends State<DetailScreen> {
             style: const TextStyle(fontSize: 12),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildSentimentCard(String platform, String sentiment, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            color.withOpacity(0.1),
-            color.withOpacity(0.05),
-          ],
-        ),
-        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: color.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          // Platform Icon
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              icon,
-              color: color,
-              size: 28,
-            ),
-          ),
-          const SizedBox(width: 16),
-
-          // Platform Name and Sentiment
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  platform,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  sentiment,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: Colors.white70,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Sentiment Indicator
-          _buildSentimentIndicator(sentiment, color),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSentimentIndicator(String sentiment, Color platformColor) {
-    IconData icon;
-    Color color;
-
-    final lowerSentiment = sentiment.toLowerCase();
-
-    if (lowerSentiment.contains('positive') || lowerSentiment.contains('good') || lowerSentiment.contains('great')) {
-      icon = Icons.sentiment_very_satisfied;
-      color = Colors.green;
-    } else if (lowerSentiment.contains('negative') || lowerSentiment.contains('bad') || lowerSentiment.contains('poor')) {
-      icon = Icons.sentiment_very_dissatisfied;
-      color = Colors.red;
-    } else if (lowerSentiment.contains('mixed') || lowerSentiment.contains('neutral')) {
-      icon = Icons.sentiment_neutral;
-      color = Colors.orange;
-    } else {
-      icon = Icons.help_outline;
-      color = Colors.grey;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(
-        icon,
-        color: color,
-        size: 24,
       ),
     );
   }
